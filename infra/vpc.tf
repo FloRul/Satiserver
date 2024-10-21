@@ -78,6 +78,15 @@ resource "aws_security_group_rule" "query_port" {
   description       = "Query port access"
   security_group_id = aws_security_group.game_server_sg.id
 }
+resource "aws_security_group_rule" "admin_port" {
+  type              = "ingress"
+  from_port         = 22
+  to_port           = 22
+  protocol          = "tcp"
+  cidr_blocks       = var.players_ips
+  description       = "admin port access"
+  security_group_id = aws_security_group.game_server_sg.id
+}
 
 resource "aws_security_group_rule" "all_egress" {
   type              = "egress"
@@ -85,5 +94,15 @@ resource "aws_security_group_rule" "all_egress" {
   to_port           = 0
   protocol          = "-1"
   cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.game_server_sg.id
+}
+
+resource "aws_security_group_rule" "ec2_instance_connect" {
+  type              = "ingress"
+  from_port         = 22
+  to_port           = 22
+  protocol          = "tcp"
+  cidr_blocks       = ["35.183.92.176/29"]
+  description       = "EC2 Instance Connect service access"
   security_group_id = aws_security_group.game_server_sg.id
 }
