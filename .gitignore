@@ -1,0 +1,5 @@
+﻿# Ignore terraform module and plugin files
+*.tfstate
+*.tfstate.backup
+.terraform/
+*.tfvars
