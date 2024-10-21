@@ -1,28 +1,28 @@
-﻿#!/bin/sh
+﻿# #!/bin/sh
 
-# Note: Arguments to this script 
-#  1: string - S3 bucket for your backup save files (required)
-S3_SAVE_BUCKET=$1
+# # Note: Arguments to this script 
+# #  1: string - S3 bucket for your backup save files (required)
+# S3_SAVE_BUCKET=$1
 
-# install steamcmd: https://developer.valvesoftware.com/wiki/SteamCMD?__cf_chl_jschl_tk__=pmd_WNQPOiK18.h0rf16RCYrARI2s8_84hUMwT.7N1xHYcs-1635248050-0-gqNtZGzNAiWjcnBszQiR#Linux.2FmacOS)
-sudo add-apt-repository multiverse
-sudo dpkg --add-architecture i386
-sudo apt update
-sudo apt install steamcmd
+echo steam steam/question select "I AGREE" | sudo debconf-set-selections
+echo steam steam/license note '' | sudo debconf-set-selections
+sudo add-apt-repository multiverse -y; sudo dpkg --add-architecture i386; sudo apt update
+sudo apt install steamcmd -y
+# install aws cli: https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html
+# sudo snap install aws-cli --classic
 
 # install satisfactory: https://satisfactory.fandom.com/wiki/Dedicated_servers
 STEAM_INSTALL_SCRIPT="steamcmd +force_install_dir ~/SatisfactoryDedicatedServer +login anonymous +app_update 1690800 -beta public validate +quit"
 # note, we are switching users because steam doesn't recommend running steamcmd as root
-"$STEAM_INSTALL_SCRIPT"
+eval "$STEAM_INSTALL_SCRIPT"
 
 # enable as server so it stays up and start: https://satisfactory.fandom.com/wiki/Dedicated_servers/Running_as_a_Service
 # sudo systemctl status satisfactory
-cat << EOF > /etc/systemd/system/satisfactory.service
+sudo bash -c 'cat << EOF > /etc/systemd/system/satisfactory.service
 [Unit]
 Description=Satisfactory dedicated server
 Wants=network-online.target
 After=syslog.target network.target nss-lookup.target network-online.target
-
 [Service]
 Environment="LD_LIBRARY_PATH=./linux64"
 ExecStartPre=$STEAM_INSTALL_SCRIPT
@@ -33,16 +33,15 @@ StandardOutput=journal
 Restart=on-failure
 KillSignal=SIGINT
 WorkingDirectory=/home/ubuntu/SatisfactoryDedicatedServer
-
 [Install]
 WantedBy=multi-user.target
-EOF
-systemctl enable satisfactory
-systemctl start satisfactory
+EOF'
+sudo systemctl enable satisfactory
+sudo systemctl start satisfactory
 
-# enable auto shutdown: https://github.com/feydan/satisfactory-tools/tree/main/shutdown
-cat << 'EOF' > /home/ubuntu/auto-shutdown.sh
-#!/bin/sh
+# # enable auto shutdown: https://github.com/feydan/satisfactory-tools/tree/main/shutdown
+sudo bash -c 'cat << EOF > /home/ubuntu/auto-shutdown.sh
+!/bin/sh
 
 shutdownIdleMinutes=30
 idleCheckFrequencySeconds=1
@@ -88,9 +87,9 @@ WorkingDirectory=/home/ubuntu
 
 [Install]
 WantedBy=multi-user.target
-EOF
-systemctl enable auto-shutdown
-systemctl start auto-shutdown
+EOF'
+sudo systemctl enable auto-shutdown
+sudo systemctl start auto-shutdown
 
-# automated backups to s3 every 5 minutes
-su - ubuntu -c "crontab -l -e ubuntu | { cat; echo \"*/5 * * * * /usr/local/bin/aws s3 sync /home/ubuntu/.config/Epic/FactoryGame/Saved/SaveGames/server s3://$S3_SAVE_BUCKET\"; } | crontab -"
+# # automated backups to s3 every 5 minutes
+# # su - ubuntu -c "crontab -l -e ubuntu | { cat; echo \"*/5 * * * * /usr/local/bin/aws s3 sync /home/ubuntu/.config/Epic/FactoryGame/Saved/SaveGames/server s3://$S3_SAVE_BUCKET\"; } | crontab -"
