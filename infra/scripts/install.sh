@@ -1,7 +1,4 @@
-#!/bin/sh
-# Create steam user with no password login
-sudo useradd -m steam
-sudo usermod -L steam  # Lock the password
+#!/bin/bash
 
 echo "Starting installation..."
 echo steam steam/question select "I AGREE" | sudo debconf-set-selections
@@ -9,25 +6,11 @@ echo steam steam/license note '' | sudo debconf-set-selections
 sudo add-apt-repository multiverse -y
 sudo dpkg --add-architecture i386
 sudo apt update
+sudo apt install steamcmd -y
 
-# Install required packages including AWS CLI v2
-sudo apt install steamcmd curl unzip -y
-
-# Install AWS CLI v2
-curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-unzip awscliv2.zip
-sudo ./aws/install
-rm -rf aws awscliv2.zip
-
-# Get EC2 instance region from metadata service
-REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/region)
-
-# Configure AWS CLI for the steam user to use instance role credentials
-sudo -u steam mkdir -p /home/steam/.aws
-sudo bash -c 'cat << EOF > /home/steam/.aws/config
-[default]
-region = '"$REGION"'
-EOF'
+# Create steam user with no password login
+sudo useradd -m steam
+sudo usermod -L steam  # Lock the password
 
 # Create necessary directories and set permissions
 sudo -u steam mkdir -p /home/steam/.local/share/Steam/steamapps/common/
@@ -50,7 +33,7 @@ After=syslog.target network.target nss-lookup.target network-online.target
 
 [Service]
 Environment=\"LD_LIBRARY_PATH=$STEAM_INSTALL_DIR/linux64\"
-ExecStartPre=$STEAM_INSTALL_SCRIPT
+ExecStartPre=/usr/games/steamcmd +force_install_dir $STEAM_INSTALL_DIR +login anonymous +app_update 1690800 validate +quit
 ExecStart=$STEAM_INSTALL_DIR/FactoryServer.sh
 User=steam
 Group=steam
@@ -63,6 +46,87 @@ WorkingDirectory=$STEAM_INSTALL_DIR
 [Install]
 WantedBy=multi-user.target
 EOF"
+
+sudo systemctl enable satisfactory
+sudo systemctl start satisfactory
+
+# Auto shutdown script
+sudo bash -c 'cat << EOF > /home/ubuntu/auto-shutdown.sh
+#!/bin/sh
+
+shutdownIdleMinutes=30
+idleCheckFrequencySeconds=1
+
+isIdle=0
+while [ $isIdle -le 0 ]; do
+    isIdle=1
+    iterations=$((60 / $idleCheckFrequencySeconds * $shutdownIdleMinutes))
+    while [ $iterations -gt 0 ]; do
+        sleep $idleCheckFrequencySeconds
+        connectionBytes=$(ss -lu | grep 777 | awk -F ' ' '{s+=$2} END {print s}')
+        if [ ! -z $connectionBytes ] && [ $connectionBytes -gt 0 ]; then
+            isIdle=0
+        fi
+        if [ $isIdle -le 0 ] && [ $(($iterations % 21)) -eq 0 ]; then
+           echo "Activity detected, resetting shutdown timer to $shutdownIdleMinutes minutes."
+           break
+        fi
+        iterations=$(($iterations-1))
+    done
+done
+
+echo "No activity detected for $shutdownIdleMinutes minutes, shutting down."
+sudo shutdown -h now
+EOF'
+
+chmod +x /home/ubuntu/auto-shutdown.sh
+chown ubuntu:ubuntu /home/ubuntu/auto-shutdown.sh
+
+# Create auto-shutdown service
+sudo bash -c 'cat << EOF > /etc/systemd/system/auto-shutdown.service
+[Unit]
+Description=Auto shutdown if no one is playing Satisfactory
+After=satisfactory.service
+Requires=satisfactory.service
+
+[Service]
+ExecStart=/home/ubuntu/auto-shutdown.sh
+User=ubuntu
+Group=ubuntu
+StandardOutput=journal
+Restart=always
+RestartSec=60
+KillSignal=SIGINT
+WorkingDirectory=/home/ubuntu
+
+[Install]
+WantedBy=multi-user.target
+EOF'
+
+sudo systemctl daemon-reload
+sudo systemctl enable auto-shutdown
+sudo systemctl start auto-shutdown
+
+########################## BACKUP SCRIPT ##########################
+
+sudo apt install curl unzip -y
+
+# Install AWS CLI v2
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install
+rm -rf aws awscliv2.zip
+
+# Get EC2 instance region from metadata service
+REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/region)
+
+# Configure AWS CLI for the steam user to use instance role credentials
+sudo -u steam mkdir -p /home/steam/.aws
+sudo bash -c 'cat << EOF > /home/steam/.aws/config
+[default]
+region = '"$REGION"'
+EOF'
+
 
 # Create backup script
 sudo bash -c "cat << 'EOF' > /home/steam/backup-saves.sh
@@ -145,68 +209,8 @@ OnUnitActiveSec=1h
 WantedBy=timers.target
 EOF'
 
-# Create auto-shutdown script
-sudo bash -c "cat << 'EOF' > /home/ubuntu/auto-shutdown.sh
-#!/bin/bash
-shutdownIdleMinutes=30
-idleCheckFrequencySeconds=1
-
-isIdle=0
-while [ \$isIdle -le 0 ]; do
-    isIdle=1
-    iterations=\$((60 / \$idleCheckFrequencySeconds * \$shutdownIdleMinutes))
-    while [ \$iterations -gt 0 ]; do
-        sleep \$idleCheckFrequencySeconds
-        connectionBytes=\$(ss -lu | grep 777 | awk -F \" \" '{s+=\$2} END {print s}')
-        if [ ! -z \"\$connectionBytes\" ] && [ \$connectionBytes -gt 0 ]; then
-            isIdle=0
-        fi
-        if [ \$isIdle -le 0 ] && [ \$((\$iterations % 21)) -eq 0 ]; then
-            echo \"Activity detected, resetting shutdown timer to \$shutdownIdleMinutes minutes.\"
-            break
-        fi
-        iterations=\$((\$iterations-1))
-    done
-done
-
-echo \"No activity detected for \$shutdownIdleMinutes minutes, performing backup before shutdown.\"
-sudo -u steam /home/steam/backup-saves.sh
-echo \"Backup completed, shutting down.\"
-sudo shutdown -h now
-EOF"
-
-# Create auto-shutdown service
-sudo bash -c 'cat << EOF > /etc/systemd/system/auto-shutdown.service
-[Unit]
-Description=Auto shutdown if no one is playing Satisfactory
-After=satisfactory.service
-Requires=satisfactory.service
-
-[Service]
-ExecStart=/home/ubuntu/auto-shutdown.sh
-User=ubuntu
-Group=ubuntu
-StandardOutput=journal
-Restart=always
-RestartSec=60
-KillSignal=SIGINT
-WorkingDirectory=/home/ubuntu
-
-[Install]
-WantedBy=multi-user.target
-EOF'
-
-# Make auto-shutdown script executable
-sudo chmod +x /home/ubuntu/auto-shutdown.sh
-sudo chown ubuntu:ubuntu /home/ubuntu/auto-shutdown.sh
-
-# Enable and start all services
 sudo systemctl daemon-reload
-sudo systemctl enable satisfactory
-sudo systemctl start satisfactory
 sudo systemctl enable satisfactory-backup.timer
 sudo systemctl start satisfactory-backup.timer
 sudo systemctl enable satisfactory-backup.service
 sudo systemctl start satisfactory-backup.service
-sudo systemctl enable auto-shutdown
-sudo systemctl start auto-shutdown
