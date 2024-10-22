@@ -52,38 +52,31 @@ sudo systemctl start satisfactory
 
 # Auto shutdown script
 sudo bash -c 'cat << EOF > /home/ubuntu/auto-shutdown.sh
-#!/bin/bash
+#!/bin/sh
 
 shutdownIdleMinutes=30
 idleCheckFrequencySeconds=1
 
 isIdle=0
-while true; do
+while [ $isIdle -le 0 ]; do
     isIdle=1
     iterations=$((60 / $idleCheckFrequencySeconds * $shutdownIdleMinutes))
     while [ $iterations -gt 0 ]; do
         sleep $idleCheckFrequencySeconds
-        # Check both game ports
-        connectionBytes=$(ss -lu | grep -E "15777|7777" | awk -F " " "{s+=\$2} END {print s}")
-        if [ ! -z "$connectionBytes" ] && [ "$connectionBytes" -gt 0 ]; then
+        connectionBytes=$(ss -lu | grep 777 | awk -F ' ' '{s+=$2} END {print s}')
+        if [ ! -z $connectionBytes ] && [ $connectionBytes -gt 0 ]; then
             isIdle=0
         fi
         if [ $isIdle -le 0 ] && [ $(($iterations % 21)) -eq 0 ]; then
-           echo "$(date): Activity detected, resetting shutdown timer to $shutdownIdleMinutes minutes."
+           echo "Activity detected, resetting shutdown timer to $shutdownIdleMinutes minutes."
            break
         fi
         iterations=$(($iterations-1))
-        if [ $(($iterations % 60)) -eq 0 ]; then
-           echo "$(date): No activity for $((30-$iterations/60)) minutes"
-        fi
     done
-    
-    if [ $isIdle -eq 1 ]; then
-        echo "$(date): No activity detected for $shutdownIdleMinutes minutes, shutting down."
-        sudo shutdown -h now
-        break
-    fi
 done
+
+echo "No activity detected for $shutdownIdleMinutes minutes, shutting down."
+sudo shutdown -h now
 EOF'
 
 chmod +x /home/ubuntu/auto-shutdown.sh
@@ -112,7 +105,3 @@ EOF'
 
 sudo systemctl enable auto-shutdown
 sudo systemctl start auto-shutdown
-
-# Optional: Add S3 backup
-# Uncomment and replace $S3_SAVE_BUCKET with your bucket name if needed
-# su - ubuntu -c "crontab -l -e ubuntu | { cat; echo \"*/5 * * * * /usr/local/bin/aws s3 sync /home/ubuntu/.config/Epic/FactoryGame/Saved/SaveGames/server s3://$S3_SAVE_BUCKET\"; } | crontab -"

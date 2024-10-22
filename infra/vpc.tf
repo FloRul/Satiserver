@@ -59,11 +59,31 @@ resource "aws_security_group_rule" "game_port" {
   security_group_id = aws_security_group.game_server_sg.id
 }
 
+resource "aws_security_group_rule" "game_port_tcp" {
+  type              = "ingress"
+  from_port         = 7777
+  to_port           = 7777
+  protocol          = "tcp"
+  cidr_blocks       = var.players_ips
+  description       = "Game port access"
+  security_group_id = aws_security_group.game_server_sg.id
+}
+
 resource "aws_security_group_rule" "beacon_port" {
   type              = "ingress"
   from_port         = 15000
   to_port           = 15000
   protocol          = "udp"
+  cidr_blocks       = var.players_ips
+  description       = "Beacon port access"
+  security_group_id = aws_security_group.game_server_sg.id
+}
+
+resource "aws_security_group_rule" "beacon_port_tcp" {
+  type              = "ingress"
+  from_port         = 15000
+  to_port           = 15000
+  protocol          = "tcp"
   cidr_blocks       = var.players_ips
   description       = "Beacon port access"
   security_group_id = aws_security_group.game_server_sg.id
@@ -78,6 +98,17 @@ resource "aws_security_group_rule" "query_port" {
   description       = "Query port access"
   security_group_id = aws_security_group.game_server_sg.id
 }
+
+resource "aws_security_group_rule" "query_port_tcp" {
+  type              = "ingress"
+  from_port         = 15077
+  to_port           = 15077
+  protocol          = "tcp"
+  cidr_blocks       = var.players_ips
+  description       = "Query port access"
+  security_group_id = aws_security_group.game_server_sg.id
+}
+
 resource "aws_security_group_rule" "admin_port" {
   type              = "ingress"
   from_port         = 22
