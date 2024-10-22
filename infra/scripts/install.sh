@@ -103,5 +103,6 @@ WorkingDirectory=/home/ubuntu
 WantedBy=multi-user.target
 EOF'
 
+sudo systemctl daemon-reload
 sudo systemctl enable auto-shutdown
 sudo systemctl start auto-shutdown
