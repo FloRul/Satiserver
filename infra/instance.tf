@@ -16,9 +16,9 @@ resource "aws_instance" "game_server" {
   tags = {
     Name = "game-server"
   }
-
-  user_data            = templatefile("${path.module}/scripts/install.sh", { S3_SAVE_BUCKET = aws_s3_bucket.server_backup.bucket })
-  iam_instance_profile = aws_iam_instance_profile.game_server.name
+  user_data_replace_on_change = true
+  user_data                   = templatefile("${path.module}/scripts/install.sh", { S3_SAVE_BUCKET = aws_s3_bucket.server_backup.bucket })
+  iam_instance_profile        = aws_iam_instance_profile.game_server.name
 }
 
 resource "aws_ec2_instance_state" "game_server_state" {
