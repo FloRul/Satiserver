@@ -1,4 +1,7 @@
-#!/bin/bash
+#!/bin/sh
+# Create steam user with no password login
+sudo useradd -m steam
+sudo usermod -L steam  # Lock the password
 
 echo "Starting installation..."
 echo steam steam/question select "I AGREE" | sudo debconf-set-selections
@@ -26,10 +29,6 @@ sudo bash -c 'cat << EOF > /home/steam/.aws/config
 region = '"$REGION"'
 EOF'
 
-# Create steam user with no password login
-sudo useradd -m steam
-sudo usermod -L steam  # Lock the password
-
 # Create necessary directories and set permissions
 sudo -u steam mkdir -p /home/steam/.local/share/Steam/steamapps/common/
 sudo -u steam mkdir -p /home/steam/.steam/steamapps/common/
@@ -51,7 +50,7 @@ After=syslog.target network.target nss-lookup.target network-online.target
 
 [Service]
 Environment=\"LD_LIBRARY_PATH=$STEAM_INSTALL_DIR/linux64\"
-ExecStartPre=/usr/games/steamcmd +force_install_dir $STEAM_INSTALL_DIR +login anonymous +app_update 1690800 validate +quit
+ExecStartPre=$STEAM_INSTALL_SCRIPT
 ExecStart=$STEAM_INSTALL_DIR/FactoryServer.sh
 User=steam
 Group=steam
