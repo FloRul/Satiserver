@@ -17,8 +17,14 @@ resource "aws_instance" "game_server" {
     Name = "game-server"
   }
   user_data_replace_on_change = true
-  user_data                   = templatefile("${path.module}/scripts/install.sh", { S3_SAVE_BUCKET = aws_s3_bucket.server_backup.bucket })
-  iam_instance_profile        = aws_iam_instance_profile.game_server.name
+  user_data = templatefile("${path.module}/scripts/install.sh", {
+    S3_BUCKET     = aws_s3_bucket.server_backup.bucket
+    BACKUP_PREFIX = "satisfactory-backups"
+    INSTANCE_ID   = "instance"
+    TIMESTAMP     = "timestamp"
+    fileName      = "satisfactory"
+  })
+  iam_instance_profile = aws_iam_instance_profile.game_server.name
 }
 
 resource "aws_ec2_instance_state" "game_server_state" {
@@ -64,6 +70,19 @@ resource "aws_iam_role_policy" "s3_access" {
           "s3:ListBucket"
         ]
         Resource = [
+          "${aws_s3_bucket.server_backup.arn}",
+          "${aws_s3_bucket.server_backup.arn}/*"
+        ]
+      },
+      {
+        "Effect" : "Allow",
+        "Action" : [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:ListBucket",
+          "s3:DeleteObject"
+        ],
+        "Resource" : [
           "${aws_s3_bucket.server_backup.arn}",
           "${aws_s3_bucket.server_backup.arn}/*"
         ]
