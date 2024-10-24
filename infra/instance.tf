@@ -22,7 +22,7 @@ resource "aws_instance" "game_server" {
     BACKUP_PREFIX = "satisfactory-backups"
     INSTANCE_ID   = "instance"
     TIMESTAMP     = "timestamp"
-    fileName      = "satisfactory"
+    FILE_NAME     = "satisfactory"
   })
   iam_instance_profile = aws_iam_instance_profile.game_server.name
 }
