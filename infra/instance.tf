@@ -18,11 +18,8 @@ resource "aws_instance" "game_server" {
   }
   user_data_replace_on_change = true
   user_data = templatefile("${path.module}/scripts/install.sh", {
-    S3_BUCKET     = aws_s3_bucket.server_backup.bucket
-    BACKUP_PREFIX = "satisfactory-backups"
-    INSTANCE_ID   = "instance"
-    TIMESTAMP     = "timestamp"
-    FILE_NAME     = "satisfactory"
+    s3_bucket     = aws_s3_bucket.server_backup.bucket
+    backup_prefix = "satisfactory-backups"
   })
   iam_instance_profile = aws_iam_instance_profile.game_server.name
 }
@@ -74,19 +71,6 @@ resource "aws_iam_role_policy" "s3_access" {
           "${aws_s3_bucket.server_backup.arn}/*"
         ]
       },
-      {
-        "Effect" : "Allow",
-        "Action" : [
-          "s3:PutObject",
-          "s3:GetObject",
-          "s3:ListBucket",
-          "s3:DeleteObject"
-        ],
-        "Resource" : [
-          "${aws_s3_bucket.server_backup.arn}",
-          "${aws_s3_bucket.server_backup.arn}/*"
-        ]
-      }
     ]
   })
 }
