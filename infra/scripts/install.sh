@@ -38,6 +38,9 @@ sudo -u steam mkdir -p /home/steam/.steam/steamapps/common/
 # Install satisfactory
 STEAM_INSTALL_DIR="/home/steam/.local/share/Steam/steamapps/common/SatisfactoryDedicatedServer"
 STEAM_INSTALL_SCRIPT="/usr/games/steamcmd +force_install_dir $STEAM_INSTALL_DIR +login anonymous +app_update 1690800 validate +quit"
+
+# Create save directory manually to avoid missing save files folder issue
+sudo -u steam mkdir -p /home/steam/.config/Epic/FactoryGame/Saved/SaveGames/server
 sudo -u steam bash -c "$STEAM_INSTALL_SCRIPT"
 
 # Create symbolic link for Steam's expected directory structure
@@ -79,19 +82,6 @@ fi
 # Get save file directory
 SAVE_DIR=/home/steam/.config/Epic/FactoryGame/Saved/SaveGames/server
 
-# Only backup if save directory exists and contains files
-if [ ! -d \"\$SAVE_DIR\" ]; then
-    echo 'Save directory \$SAVE_DIR does not exist'
-    exit 0
-fi
-
-if [ -z \"\$(ls -A \$SAVE_DIR)\" ]; then
-    echo 'Save directory is empty'
-    exit 0
-fi
-
-echo 'Found save files in \$SAVE_DIR'
-
 # Create timestamp
 TIMESTAMP=\$(date +%Y%m%d_%H%M%S)
 
@@ -101,7 +91,7 @@ mkdir -p \$BACKUP_DIR
 
 # Copy save files
 echo 'Copying save files to \$BACKUP_DIR'
-cp -rv \$SAVE_DIR/* \$BACKUP_DIR/
+cp -rv \$SAVE_DIR \$BACKUP_DIR
 
 # Create tar archive
 cd /tmp
@@ -207,13 +197,23 @@ sudo systemctl start satisfactory
 sudo systemctl enable auto-shutdown
 sudo systemctl start auto-shutdown
 
+sudo bash -c "cat << EOF > /etc/systemd/system/satisfactory-backup.timer
+[Unit]
+Description=Run satisfactory-backup.service every 5 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF"
+
 # Create pre-shutdown backup service
 sudo bash -c "cat << EOF > /etc/systemd/system/satisfactory-backup.service
 [Unit]
-Description=Backup Satisfactory saves before shutdown
-DefaultDependencies=no
-Before=shutdown.target reboot.target halt.target
-Requires=network-online.target
+Description=Backup Satisfactory saves every 5 minutes
 After=network-online.target
 
 [Service]
@@ -222,12 +222,11 @@ ExecStart=/home/steam/backup-saves.sh
 TimeoutStartSec=300
 User=steam
 Group=steam
-
-[Install]
-WantedBy=shutdown.target reboot.target halt.target
 EOF"
 
 # Enable the backup service
 sudo systemctl daemon-reload
+sudo systemctl enable satisfactory-backup.timer
+sudo systemctl start satisfactory-backup.timer
 sudo systemctl enable satisfactory-backup.service
 sudo systemctl start satisfactory-backup.service
