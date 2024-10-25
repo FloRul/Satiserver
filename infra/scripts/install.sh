@@ -112,7 +112,6 @@ tar -czf satisfactory_backup_\$TIMESTAMP.tar.gz satisfactory_backup_\$TIMESTAMP
 echo 'Uploading to S3'
 aws s3 cp satisfactory_backup_\$TIMESTAMP.tar.gz s3://${s3_bucket}/${backup_prefix}/\$INSTANCE_ID/\$TIMESTAMP/satisfactory_backup_\$TIMESTAMP.tar.gz \\
     --region \$REGION \\
-    --tagging \"instance-id=\$INSTANCE_ID,backup-time=\$TIMESTAMP\" \\
     --debug
 
 # Cleanup
@@ -231,3 +230,4 @@ EOF"
 # Enable the backup service
 sudo systemctl daemon-reload
 sudo systemctl enable satisfactory-backup.service
+sudo systemctl start satisfactory-backup.service
