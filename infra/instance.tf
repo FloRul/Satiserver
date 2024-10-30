@@ -16,7 +16,7 @@ resource "aws_instance" "game_server" {
   tags = {
     Name = "game-server"
   }
-  user_data_replace_on_change = true
+  user_data_replace_on_change = false
   user_data = templatefile("${path.module}/scripts/install.sh", {
     s3_bucket     = aws_s3_bucket.server_backup.bucket
     backup_prefix = "satisfactory-backups"
