@@ -1,7 +1,7 @@
 ﻿
 # EC2 Instance
 resource "aws_instance" "game_server" {
-  ami       = "ami-0eb9fdcf0d07bd5ef" # Ubuntu 22.04 LTS in ca-central-1
+  ami       = var.instance_ami # Ubuntu 22.04 LTS in ca-central-1
   subnet_id = aws_subnet.public.id
 
   instance_type = "m5a.large"
@@ -26,7 +26,7 @@ resource "aws_instance" "game_server" {
 
 resource "aws_ec2_instance_state" "game_server_state" {
   instance_id = aws_instance.game_server.id
-  state       = "running" # stopped, running
+  state       = "stopped" # stopped, running
 }
 
 # Elastic IP

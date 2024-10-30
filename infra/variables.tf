@@ -14,3 +14,8 @@ variable "backup_bucket" {
   type    = string
   default = "satiserver-backup"
 }
+
+variable "instance_ami" {
+  type     = string
+  nullable = false
+}
