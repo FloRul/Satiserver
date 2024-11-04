@@ -19,3 +19,14 @@ variable "instance_ami" {
   type     = string
   nullable = false
 }
+
+variable "budget_limit" {
+  description = "Monthly budget limit in CAD"
+  type        = number
+  nullable    = false
+}
+
+variable "admin_email" {
+  type     = string
+  nullable = false
+}

@@ -1,0 +1,110 @@
+﻿# openapi.yaml
+openapi: "3.0.1"
+info:
+  title: "Game Server Control API"
+  version: "1.0.0"
+  description: "API to control game server EC2 instance state"
+
+paths:
+  /status:
+    post:
+      summary: "Control EC2 instance state"
+      description: "Start or stop the game server instance"
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action
+              properties:
+                action:
+                  type: string
+                  enum: [start, stop]
+                  description: "Action to perform on the instance"
+      responses:
+        "200":
+          description: "Operation successful"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  instanceId:
+                    type: string
+                  action:
+                    type: string
+        "400":
+          description: "Invalid request"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  details:
+                    type: string
+        "500":
+          description: "Internal server error"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+      x-amazon-apigateway-integration:
+        uri: "arn:aws:apigateway:${region}:lambda:path/2015-03-31/functions/${lambda_invoke_arn}/invocations"
+        httpMethod: POST
+        type: aws_proxy
+
+    get:
+      security:
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: "Operation successful"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: "Message to display"
+        "500":
+          description: "Internal server error"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: "Message to display"
+        "400":
+          description: "Invalid request"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: "Message to display"
+      x-amazon-apigateway-integration:
+        uri: "arn:aws:apigateway:${region}:lambda:path/2015-03-31/functions/${lambda_invoke_arn}/invocations"
+        httpMethod: POST
+        type: aws_proxy
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      name: x-api-key
+      in: header
